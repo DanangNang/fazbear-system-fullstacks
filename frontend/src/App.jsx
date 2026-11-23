@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import LoginPage from './components/LoginPage';
 import Navbar from './components/Navbar';
 import Dashboard from './components/Dashboard';
@@ -11,24 +11,47 @@ import StoryGameSection from './components/StoryGameSection';
 import MapSection from './components/MapSection';
 import CameraSection from './components/CameraSection';
 
+const API_URL = 'http://localhost:3000/animatronics';
+
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [guardName, setGuardName] = useState('');
   const [guardId, setSecurityId] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [animatronics, setAnimatronics] = useState(() => {
-    const saved = localStorage.getItem('fazbear_animatronics');
-    return saved ? JSON.parse(saved) : [];
-  });
+
+  const [animatronics, setAnimatronics] = useState([]);
+  const [isLoadingArchives, setIsLoadingArchives] = useState(false);
+
   const [tools, setTools] = useState(() => {
     const saved = localStorage.getItem('fazbear_tools');
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Ambil data dari Backend NestJS
+  const fetchAnimatronics = useCallback(async () => {
+    setIsLoadingArchives(true);
+    try {
+      const response = await fetch(API_URL);
+      if (!response.ok) throw new Error('Gagal mengambil data dari server NestJS');
+      const data = await response.json();
+
+      // Mapping seriesGame dari backend agar tetap kompatibel dengan SeriesGameSection & MapSection
+      const normalized = data.map((item) => ({
+        ...item,
+        series: item.seriesGame,
+      }));
+      setAnimatronics(normalized);
+    } catch (error) {
+      console.error('Error fetching animatronics:', error);
+    } finally {
+      setIsLoadingArchives(false);
+    }
+  }, []);
+
   useEffect(() => {
-    localStorage.setItem('fazbear_animatronics', JSON.stringify(animatronics));
-  }, [animatronics]);
+    fetchAnimatronics();
+  }, [fetchAnimatronics]);
 
   useEffect(() => {
     localStorage.setItem('fazbear_tools', JSON.stringify(tools));
@@ -80,7 +103,8 @@ export default function App() {
         {activeTab === 'archives' && (
           <ArchivesSection
             animatronics={animatronics}
-            setAnimatronics={setAnimatronics}
+            onRefresh={fetchAnimatronics}
+            isLoading={isLoadingArchives}
           />
         )}
         {activeTab === 'about' && <AboutSection />}

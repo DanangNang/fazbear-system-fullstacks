@@ -1,0 +1,57 @@
+### 1. GET All Animatronics (Status 200 OK)
+GET http://localhost:3000/animatronics
+
+### 2. POST Create Animatronic (Status 201 Created)
+POST http://localhost:3000/animatronics
+Content-Type: application/json
+
+{
+  "name": "Foxy the Pirate",
+  "form": "Fox",
+  "seriesGame": "FNAF 1",
+  "threatLevel": 9,
+  "isPossessed": true,
+  "behaviorNote": "Berlari ke West Hall jika jarang dipantau kamera."
+}
+
+### 3. GET One Animatronic by ID (Status 200 OK)
+GET http://localhost:3000/animatronics/3
+
+### 4. PATCH Update Animatronic (Status 200 OK)
+PATCH http://localhost:3000/animatronics/3
+Content-Type: application/json
+
+{
+  "threatLevel": 10,
+  "behaviorNote": "Menguras daya pintu kiri setiap kali mengetuk."
+}
+
+### 5. DELETE Animatronic (Status 200 OK)
+DELETE http://localhost:3000/animatronics/3
+
+### 6. Uji Error 1: ConflictException (Status 409 - Nama Duplikat)
+POST http://localhost:3000/animatronics
+Content-Type: application/json
+
+{
+  "name": "Freddy Fazbear",
+  "form": "Bear",
+  "seriesGame": "FNAF 1",
+  "threatLevel": 8,
+  "isPossessed": true
+}
+
+### 7. Uji Error 2: NotFoundException (Status 404 - ID Tidak Ditemukan)
+GET http://localhost:3000/animatronics/999
+
+### 8. Uji Validasi DTO: ValidationPipe (Status 400 Bad Request)
+POST http://localhost:3000/animatronics
+Content-Type: application/json
+
+{
+  "name": "AB",
+  "form": "Alien",
+  "seriesGame": "F1",
+  "threatLevel": 50,
+  "isPossessed": "bukan-boolean"
+}
