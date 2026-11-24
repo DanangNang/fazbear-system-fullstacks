@@ -199,19 +199,19 @@ export default function LoginPage({ onLogin }) {
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => handleQuickDemo('Mike Schmidt', 'FAZ-8701')}
+              onClick={() => handleQuickDemo('Nearbys', 'FAZ-0001')}
               className="p-2 rounded bg-[#1F1F1F] hover:bg-[#2A2A2A] hover:border-[#EA580C]/50 border border-[#2E2E2E] text-left transition-colors text-[11px] cursor-pointer"
             >
-              <div className="font-semibold text-[#F5F5F5]">Mike Schmidt</div>
-              <div className="text-[#FB923C] font-mono">FAZ-8701</div>
+              <div className="font-semibold text-[#F5F5F5]">Nearbys</div>
+              <div className="text-[#FB923C] font-mono">FAZ-0001</div>
             </button>
             <button
               type="button"
-              onClick={() => handleQuickDemo('Jeremy Fitzgerald', 'FAZ-8702')}
+              onClick={() => handleQuickDemo('Michael Afton', 'FAZ-0005')}
               className="p-2 rounded bg-[#1F1F1F] hover:bg-[#2A2A2A] hover:border-[#EA580C]/50 border border-[#2E2E2E] text-left transition-colors text-[11px] cursor-pointer"
             >
-              <div className="font-semibold text-[#F5F5F5]">Jeremy Fitzgerald</div>
-              <div className="text-[#FB923C] font-mono">FAZ-8702</div>
+              <div className="font-semibold text-[#F5F5F5]">Michael Afton</div>
+              <div className="text-[#FB923C] font-mono">FAZ-0005</div>
             </button>
           </div>
         </div>

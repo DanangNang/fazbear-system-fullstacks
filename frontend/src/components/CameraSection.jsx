@@ -10,6 +10,10 @@ import {
     Eye,
     Download,
     Radio,
+    Trash2,
+    HardDrive,
+    Maximize2,
+    X,
 } from 'lucide-react';
 
 const CCTV_CHANNELS = [
@@ -20,6 +24,8 @@ const CCTV_CHANNELS = [
     { id: 'CAM 05', label: 'CAM 05 // PARTS & SERVICE' },
     { id: 'CAM 06', label: 'CAM 06 // OFFICE PERIMETER' },
 ];
+
+const STORAGE_KEY = 'fazbear_camera_snapshots';
 
 export default function CameraSection() {
     const videoRef = useRef(null);
@@ -32,15 +38,31 @@ export default function CameraSection() {
     const [nightVision, setNightVision] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [currentTime, setCurrentTime] = useState(new Date());
-    const [snapshotUrl, setSnapshotUrl] = useState(null);
 
-    // Update jam real-time untuk HUD CCTV
+    // Storage Galeri Snapshot (Persisten di localStorage)
+    const [snapshots, setSnapshots] = useState(() => {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
+    const [previewSnapshot, setPreviewSnapshot] = useState(null);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots));
+        } catch (err) {
+            setErrorMsg('Penyimpanan foto penuh! Hapus beberapa foto lama di CCTV Storage.');
+        }
+    }, [snapshots]);
+
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
 
-    // Fungsi memindai perangkat kamera (termasuk USB Smartphone Bridge)
     const scanVideoDevices = async () => {
         setErrorMsg('');
         try {
@@ -54,7 +76,6 @@ export default function CameraSection() {
             setDevices(videoInputs);
 
             if (videoInputs.length > 0 && !selectedDeviceId) {
-                // Prioritaskan kamera eksternal / HP via USB jika terdeteksi dari labelnya
                 const usbCam = videoInputs.find((d) =>
                     /droidcam|iriun|usb|camo|phone|android|iphone|external/i.test(d.label)
                 );
@@ -105,7 +126,6 @@ export default function CameraSection() {
             }
 
             setIsStreaming(true);
-            // Refresh label device setelah izin kamera diberikan browser
             await scanVideoDevices();
         } catch (err) {
             setIsStreaming(false);
@@ -126,16 +146,50 @@ export default function CameraSection() {
         }
     };
 
+    // Capture Foto & Simpan ke Storage
     const handleTakeSnapshot = () => {
         if (!videoRef.current || !canvasRef.current || !isStreaming) return;
         const video = videoRef.current;
         const canvas = canvasRef.current;
-        canvas.width = video.videoWidth || 1280;
-        canvas.height = video.videoHeight || 720;
+
+        // Skala optimal agar ringan disimpan di localStorage
+        const targetWidth = 960;
+        const ratio = (video.videoHeight || 720) / (video.videoWidth || 1280);
+        canvas.width = targetWidth;
+        canvas.height = Math.round(targetWidth * ratio);
 
         const ctx = canvas.getContext('2d');
+        if (nightVision) {
+            ctx.filter = 'sepia(100%) hue-rotate(70deg) saturate(300%) contrast(125%) brightness(95%)';
+        } else {
+            ctx.filter = 'contrast(110%)';
+        }
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        setSnapshotUrl(canvas.toDataURL('image/png'));
+
+        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        const now = new Date();
+
+        const newPhoto = {
+            id: `CAP-${Date.now()}`,
+            channelId: activeChannel.id,
+            channelLabel: activeChannel.label,
+            mode: nightVision ? 'NIGHT VISION' : 'STANDARD',
+            capturedAt: now.toLocaleTimeString('id-ID', { hour12: false }),
+            capturedDate: now.toLocaleDateString('id-ID'),
+            imageUrl: imageDataUrl,
+        };
+
+        setSnapshots((prev) => [newPhoto, ...prev]);
+    };
+
+    const handleDeleteSnapshot = (id) => {
+        setSnapshots((prev) => prev.filter((item) => item.id !== id));
+        if (previewSnapshot?.id === id) setPreviewSnapshot(null);
+    };
+
+    const handleClearAllSnapshots = () => {
+        setSnapshots([]);
+        setPreviewSnapshot(null);
     };
 
     return (
@@ -169,10 +223,9 @@ export default function CameraSection() {
                 </div>
             </section>
 
-            {/* Control Bar: USB Device Selector & Actions */}
+            {/* Control Bar */}
             <section className="bg-[#141414] border border-[#2E2E2E] rounded-xl p-5 shadow-lg">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
-                    {/* Select Camera Device */}
                     <div className="lg:col-span-6">
                         <label className="flex items-center gap-1.5 text-xs font-mono text-[#A3A3A3] uppercase mb-1.5">
                             <Smartphone className="w-3.5 h-3.5 text-[#EA580C]" />
@@ -206,7 +259,6 @@ export default function CameraSection() {
                         </div>
                     </div>
 
-                    {/* Connect / Disconnect & Night Vision Buttons */}
                     <div className="lg:col-span-6 flex flex-wrap items-center justify-start lg:justify-end gap-2.5">
                         {!isStreaming ? (
                             <button
@@ -232,8 +284,8 @@ export default function CameraSection() {
                             type="button"
                             onClick={() => setNightVision((prev) => !prev)}
                             className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg border text-xs font-mono uppercase cursor-pointer transition-colors ${nightVision
-                                    ? 'bg-emerald-950/80 border-emerald-500 text-emerald-400'
-                                    : 'bg-[#1F1F1F] border-[#2E2E2E] text-[#A3A3A3] hover:text-[#F5F5F5]'
+                                ? 'bg-emerald-950/80 border-emerald-500 text-emerald-400'
+                                : 'bg-[#1F1F1F] border-[#2E2E2E] text-[#A3A3A3] hover:text-[#F5F5F5]'
                                 }`}
                         >
                             <Eye className="w-4 h-4" />
@@ -244,15 +296,14 @@ export default function CameraSection() {
                             type="button"
                             disabled={!isStreaming}
                             onClick={handleTakeSnapshot}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg bg-[#1F1F1F] hover:bg-[#2A2A2A] disabled:opacity-40 disabled:cursor-not-allowed border border-[#2E2E2E] text-xs font-mono text-[#F5F5F5] uppercase cursor-pointer transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg bg-[#1F1F1F] hover:bg-[#2A2A2A] disabled:opacity-40 disabled:cursor-not-allowed border border-[#EA580C]/70 text-xs font-mono text-[#FB923C] uppercase cursor-pointer transition-colors"
                         >
-                            <Download className="w-4 h-4 text-[#EA580C]" />
-                            <span>Capture</span>
+                            <Camera className="w-4 h-4 text-[#EA580C]" />
+                            <span>Capture & Save</span>
                         </button>
                     </div>
                 </div>
 
-                {/* Error Alert */}
                 {errorMsg && (
                     <div className="mt-4 p-3.5 rounded-lg bg-red-950/40 border border-red-500/60 flex items-start gap-2.5 text-xs font-mono text-red-300">
                         <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
@@ -263,10 +314,8 @@ export default function CameraSection() {
 
             {/* Main CCTV Monitor + Channel Selector */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                {/* Monitor Screen (3 Cols) */}
                 <section className="lg:col-span-3 bg-[#141414] border border-[#2E2E2E] rounded-xl p-4 shadow-2xl">
                     <div className="relative w-full aspect-video bg-[#050505] border border-[#2E2E2E] rounded-lg overflow-hidden">
-                        {/* Live Video Element */}
                         <video
                             ref={videoRef}
                             playsInline
@@ -278,10 +327,8 @@ export default function CameraSection() {
                                 }`}
                         />
 
-                        {/* CRT Scanline Overlay */}
                         <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.35)_50%)] [background-size:100%_4px] opacity-60" />
 
-                        {/* CCTV HUD Overlay (Top) */}
                         <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-none font-mono">
                             <div className="flex items-center gap-2 px-3 py-1 rounded bg-black/70 border border-white/15 text-xs text-[#F5F5F5]">
                                 <span
@@ -298,13 +345,11 @@ export default function CameraSection() {
                             </div>
                         </div>
 
-                        {/* Corner Brackets */}
                         <div className="absolute top-2.5 left-2.5 w-5 h-5 border-t-2 border-l-2 border-[#EA580C]/70 pointer-events-none" />
                         <div className="absolute top-2.5 right-2.5 w-5 h-5 border-t-2 border-r-2 border-[#EA580C]/70 pointer-events-none" />
                         <div className="absolute bottom-2.5 left-2.5 w-5 h-5 border-b-2 border-l-2 border-[#EA580C]/70 pointer-events-none" />
                         <div className="absolute bottom-2.5 right-2.5 w-5 h-5 border-b-2 border-r-2 border-[#EA580C]/70 pointer-events-none" />
 
-                        {/* Placeholder saat kamera belum terhubung */}
                         {!isStreaming && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
                                 <div className="w-16 h-16 rounded-2xl bg-[#141414] border border-[#2E2E2E] flex items-center justify-center text-[#EA580C] mb-4">
@@ -325,7 +370,7 @@ export default function CameraSection() {
                     <canvas ref={canvasRef} className="hidden" />
                 </section>
 
-                {/* Right Panel: CCTV Channel Switcher & Last Snapshot */}
+                {/* Right Panel: CCTV Channel Switcher */}
                 <section className="bg-[#141414] border border-[#2E2E2E] rounded-xl p-5 shadow-xl flex flex-col justify-between space-y-5">
                     <div>
                         <div className="text-xs font-mono text-[#EA580C] uppercase font-bold mb-3 pb-2 border-b border-[#2E2E2E]">
@@ -340,8 +385,8 @@ export default function CameraSection() {
                                         type="button"
                                         onClick={() => setActiveChannel(ch)}
                                         className={`w-full text-left px-3 py-2.5 rounded-lg border text-xs font-mono transition-all cursor-pointer ${isSelected
-                                                ? 'bg-[#EA580C] text-white border-[#EA580C] font-bold shadow-[0_0_12px_rgba(234,88,12,0.35)]'
-                                                : 'bg-[#1A1A1A] text-[#A3A3A3] border-[#2E2E2E] hover:border-[#EA580C]/60 hover:text-[#F5F5F5]'
+                                            ? 'bg-[#EA580C] text-white border-[#EA580C] font-bold shadow-[0_0_12px_rgba(234,88,12,0.35)]'
+                                            : 'bg-[#1A1A1A] text-[#A3A3A3] border-[#2E2E2E] hover:border-[#EA580C]/60 hover:text-[#F5F5F5]'
                                             }`}
                                     >
                                         {ch.label}
@@ -351,28 +396,133 @@ export default function CameraSection() {
                         </div>
                     </div>
 
-                    {/* Preview Hasil Capture Snapshot */}
-                    {snapshotUrl && (
-                        <div className="pt-3 border-t border-[#2E2E2E]">
-                            <div className="flex items-center justify-between text-[11px] font-mono text-[#A3A3A3] mb-2">
-                                <span>LAST CAPTURE</span>
-                                <a
-                                    href={snapshotUrl}
-                                    download={`fazbear-${activeChannel.id.toLowerCase().replace(' ', '-')}.png`}
-                                    className="text-[#FB923C] hover:underline"
-                                >
-                                    SIMPAN PNG
-                                </a>
-                            </div>
-                            <img
-                                src={snapshotUrl}
-                                alt="CCTV Snapshot"
-                                className="w-full rounded border border-[#2E2E2E] object-cover"
-                            />
+                    <div className="p-3.5 rounded-lg bg-[#0A0A0A] border border-[#2E2E2E] font-mono text-xs space-y-1">
+                        <div className="text-[#A3A3A3] flex items-center gap-1.5">
+                            <HardDrive className="w-3.5 h-3.5 text-[#EA580C]" />
+                            <span>EVIDENCE STORAGE</span>
                         </div>
-                    )}
+                        <div className="text-base font-bold text-[#F5F5F5]">
+                            {snapshots.length} <span className="text-xs font-normal text-[#A3A3A3]">SNAPSHOTS SAVED</span>
+                        </div>
+                    </div>
                 </section>
             </div>
+
+            {/* CCTV Snapshot Storage Gallery */}
+            <section className="bg-[#141414] border border-[#2E2E2E] rounded-xl p-6 shadow-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[#2E2E2E]">
+                    <div>
+                        <div className="flex items-center gap-2 text-xs font-mono text-[#EA580C] uppercase font-bold">
+                            <HardDrive className="w-4 h-4" />
+                            <span>CCTV SNAPSHOT STORAGE // EVIDENCE ARCHIVE</span>
+                        </div>
+                        <p className="text-xs text-[#A3A3A3] mt-0.5">
+                            Seluruh hasil tangkapan kamera tersimpan otomatis di memori lokal browser.
+                        </p>
+                    </div>
+
+                    {snapshots.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={handleClearAllSnapshots}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/50 hover:bg-red-900/70 border border-red-500/50 text-xs font-mono text-red-400 cursor-pointer transition-colors self-start sm:self-auto"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Kosongkan Storage</span>
+                        </button>
+                    )}
+                </div>
+
+                {snapshots.length === 0 ? (
+                    <div className="p-8 rounded-lg bg-[#0A0A0A] border border-dashed border-[#2E2E2E] text-center font-mono text-xs text-[#A3A3A3]">
+                        BELUM ADA FOTO TERSIMPAN. HUBUNGKAN KAMERA LALU TEKAN TOMBOL <span className="text-[#EA580C]">CAPTURE & SAVE</span>.
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {snapshots.map((snap) => (
+                            <div
+                                key={snap.id}
+                                className="bg-[#0A0A0A] border border-[#2E2E2E] hover:border-[#EA580C]/70 rounded-lg overflow-hidden flex flex-col justify-between group"
+                            >
+                                <div className="relative aspect-video bg-black overflow-hidden">
+                                    <img
+                                        src={snap.imageUrl}
+                                        alt={snap.channelLabel}
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setPreviewSnapshot(snap)}
+                                        title="Perbesar foto"
+                                        className="absolute top-2 right-2 p-1.5 rounded bg-black/75 border border-white/15 text-white hover:text-[#EA580C] cursor-pointer"
+                                    >
+                                        <Maximize2 className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+
+                                <div className="p-3 font-mono text-[11px] space-y-2">
+                                    <div>
+                                        <div className="text-[#FB923C] font-bold truncate">{snap.channelLabel}</div>
+                                        <div className="text-[#A3A3A3]">
+                                            {snap.capturedDate} • {snap.capturedAt} WIB
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-2 border-t border-[#2E2E2E]">
+                                        <a
+                                            href={snap.imageUrl}
+                                            download={`fazbear-${snap.channelId.toLowerCase().replace(' ', '-')}-${snap.capturedAt.replace(/:/g, '-')}.jpg`}
+                                            className="inline-flex items-center gap-1 text-[#F5F5F5] hover:text-[#EA580C]"
+                                        >
+                                            <Download className="w-3.5 h-3.5" />
+                                            <span>UNDUH</span>
+                                        </a>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeleteSnapshot(snap.id)}
+                                            className="inline-flex items-center gap-1 text-[#A3A3A3] hover:text-red-400 cursor-pointer"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                            <span>HAPUS</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </section>
+
+            {/* Modal Preview Foto Besar */}
+            {previewSnapshot && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xs"
+                    onClick={() => setPreviewSnapshot(null)}
+                >
+                    <div
+                        className="w-full max-w-3xl bg-[#141414] border border-[#EA580C] rounded-xl overflow-hidden shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="px-5 py-3 bg-[#1F1F1F] border-b border-[#2E2E2E] flex items-center justify-between font-mono text-xs">
+                            <span className="text-[#FB923C] font-bold">
+                                {previewSnapshot.channelLabel} // {previewSnapshot.capturedDate} {previewSnapshot.capturedAt} WIB
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setPreviewSnapshot(null)}
+                                className="text-[#A3A3A3] hover:text-white cursor-pointer"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <img
+                            src={previewSnapshot.imageUrl}
+                            alt={previewSnapshot.channelLabel}
+                            className="w-full max-h-[75vh] object-contain bg-black"
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

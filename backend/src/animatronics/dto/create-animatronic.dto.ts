@@ -35,4 +35,8 @@ export class CreateAnimatronicDto {
     @IsOptional()
     @IsString()
     behaviorNote?: string;
+
+    @IsOptional()
+    @IsString()
+    imageUrl?: string;
 }

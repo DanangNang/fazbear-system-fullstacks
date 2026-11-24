@@ -9,46 +9,36 @@ import { Animatronic } from './entities/animatronic.entity';
 
 @Injectable()
 export class AnimatronicsService {
-  private animatronics: Animatronic[] = [
-    {
-      id: 1,
-      name: 'Freddy Fazbear',
-      form: 'Bear',
-      seriesGame: 'FNAF 1',
-      threatLevel: 8,
-      isPossessed: true,
-      behaviorNote: 'Bergerak di kegelapan dari Show Stage menuju East Hall.',
-      loggedAt: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      name: 'Springtrap',
-      form: 'Rabbit',
-      seriesGame: 'FNAF 3',
-      threatLevel: 10,
-      isPossessed: true,
-      behaviorNote: 'Sangat agresif, tertarik pada suara audio lure.',
-      loggedAt: new Date().toISOString(),
-    },
-  ];
+  // Dimulai kosong tanpa data dummy
+  private animatronics: Animatronic[] = [];
+  // Penyimpanan sementara untuk entitas yang dihapus (Recycle Bin)
+  private trash: Animatronic[] = [];
 
-  private nextId = 3;
+  // Menghitung ID berikutnya: otomatis reset ke 1 jika arsip & sampah kosong
+  private getNextId(): number {
+    const allItems = [...this.animatronics, ...this.trash];
+    if (allItems.length === 0) {
+      return 1;
+    }
+    const maxId = Math.max(...allItems.map((item) => item.id));
+    return maxId + 1;
+  }
 
-  create(createAnimatronicDto: CreateAnimatronicDto): Animatronic {
+  create(createDto: CreateAnimatronicDto): Animatronic {
     const isDuplicate = this.animatronics.some(
-      (item) =>
-        item.name.toLowerCase() === createAnimatronicDto.name.toLowerCase(),
+      (item) => item.name.toLowerCase() === createDto.name.trim().toLowerCase(),
     );
 
     if (isDuplicate) {
       throw new ConflictException(
-        `Arsip untuk animatronic "${createAnimatronicDto.name}" sudah tercatat di sistem Fazbear!`,
+        `Animatronic dengan nama "${createDto.name}" sudah terdaftar di arsip Fazbear!`,
       );
     }
 
     const newAnimatronic: Animatronic = {
-      id: this.nextId++,
-      ...createAnimatronicDto,
+      id: this.getNextId(),
+      ...createDto,
+      name: createDto.name.trim(),
       loggedAt: new Date().toISOString(),
     };
 
@@ -62,50 +52,111 @@ export class AnimatronicsService {
 
   findOne(id: number): Animatronic {
     const animatronic = this.animatronics.find((item) => item.id === id);
-
     if (!animatronic) {
       throw new NotFoundException(
-        `Data animatronic dengan ID #${id} tidak ditemukan di database keamanan.`,
+        `Animatronic dengan ID #${id} tidak ditemukan di sistem.`,
       );
     }
-
     return animatronic;
   }
 
-  update(id: number, updateAnimatronicDto: UpdateAnimatronicDto): Animatronic {
-    const existing = this.findOne(id);
+  update(id: number, updateDto: UpdateAnimatronicDto): Animatronic {
+    const animatronic = this.findOne(id);
 
-    if (updateAnimatronicDto.name) {
+    if (updateDto.name) {
       const isDuplicate = this.animatronics.some(
         (item) =>
           item.id !== id &&
-          item.name.toLowerCase() === updateAnimatronicDto.name!.toLowerCase(),
+          item.name.toLowerCase() === updateDto.name!.trim().toLowerCase(),
       );
       if (isDuplicate) {
         throw new ConflictException(
-          `Nama animatronic "${updateAnimatronicDto.name}" sudah digunakan oleh entitas lain!`,
+          `Nama "${updateDto.name}" sudah digunakan oleh entitas lain!`,
         );
       }
     }
 
-    const updatedAnimatronic: Animatronic = {
-      ...existing,
-      ...updateAnimatronicDto,
-    };
+    Object.assign(animatronic, {
+      ...updateDto,
+      ...(updateDto.name ? { name: updateDto.name.trim() } : {}),
+    });
 
-    const index = this.animatronics.findIndex((item) => item.id === id);
-    this.animatronics[index] = updatedAnimatronic;
-
-    return updatedAnimatronic;
+    return animatronic;
   }
 
-  remove(id: number): { message: string; deletedData: Animatronic } {
-    const existing = this.findOne(id);
-    this.animatronics = this.animatronics.filter((item) => item.id !== id);
+  // Soft Delete: Pindahkan ke Trash (Sampah)
+  remove(id: number) {
+    const index = this.animatronics.findIndex((item) => item.id === id);
+    if (index === -1) {
+      throw new NotFoundException(
+        `Gagal menghapus: Animatronic dengan ID #${id} tidak ditemukan.`,
+      );
+    }
+
+    const [deletedItem] = this.animatronics.splice(index, 1);
+    this.trash.unshift(deletedItem);
 
     return {
-      message: `Arsip animatronic "${existing.name}" (ID #${id}) berhasil dihapus.`,
-      deletedData: existing,
+      message: `Data "${deletedItem.name}" (ID #${id}) dipindahkan ke Trash.`,
+      deleted: deletedItem,
+    };
+  }
+
+  // --- FITUR TRASH / RECYCLE BIN ---
+
+  findAllTrash(): Animatronic[] {
+    return this.trash;
+  }
+
+  restoreFromTrash(id: number) {
+    const index = this.trash.findIndex((item) => item.id === id);
+    if (index === -1) {
+      throw new NotFoundException(
+        `Item ID #${id} tidak ditemukan di dalam Trash.`,
+      );
+    }
+
+    const itemToRestore = this.trash[index];
+
+    // Cek jika ada nama sama yang baru saja dibuat di arsip aktif
+    const isDuplicateActive = this.animatronics.some(
+      (item) => item.name.toLowerCase() === itemToRestore.name.toLowerCase(),
+    );
+    if (isDuplicateActive) {
+      throw new ConflictException(
+        `Tidak dapat mengembalikan "${itemToRestore.name}" karena nama tersebut sudah aktif di Archives.`,
+      );
+    }
+
+    this.trash.splice(index, 1);
+    this.animatronics.push(itemToRestore);
+    // Urutkan kembali berdasarkan ID agar rapi
+    this.animatronics.sort((a, b) => a.id - b.id);
+
+    return {
+      message: `Data "${itemToRestore.name}" (ID #${id}) berhasil dikembalikan ke Archives.`,
+      restored: itemToRestore,
+    };
+  }
+
+  permanentDeleteFromTrash(id: number) {
+    const index = this.trash.findIndex((item) => item.id === id);
+    if (index === -1) {
+      throw new NotFoundException(
+        `Item ID #${id} tidak ditemukan di dalam Trash.`,
+      );
+    }
+
+    const [removed] = this.trash.splice(index, 1);
+    return {
+      message: `Data "${removed.name}" (ID #${id}) dihapus permanen.`,
+    };
+  }
+
+  emptyTrash() {
+    this.trash = [];
+    return {
+      message: 'Seluruh isi Trash berhasil dikosongkan.',
     };
   }
 }

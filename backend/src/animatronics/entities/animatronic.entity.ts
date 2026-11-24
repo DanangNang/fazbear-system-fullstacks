@@ -6,5 +6,6 @@ export class Animatronic {
     threatLevel: number;
     isPossessed: boolean;
     behaviorNote?: string;
+    imageUrl?: string;
     loggedAt: string;
 }

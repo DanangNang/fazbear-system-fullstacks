@@ -10,7 +10,7 @@ export default function Dashboard({ guardName, guardId, onNavigateAbout }) {
         {/* Subtle orange accent corner glow */}
         <div className="absolute top-0 right-0 w-72 h-72 bg-[#EA580C]/12 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-6">
           <div>
             <div className="flex items-center gap-2 text-xs font-mono text-[#EA580C] mb-1.5 uppercase tracking-wider font-semibold">
               <span className="w-2 h-2 rounded-full bg-[#EA580C] animate-pulse shadow-[0_0_8px_#EA580C]" />
@@ -26,34 +26,34 @@ export default function Dashboard({ guardName, guardId, onNavigateAbout }) {
             </p>
           </div>
 
-          {/* Quick Metrics Bar in Orange and Black */}
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
-            <div className="p-3 rounded-lg bg-[#1F1F1F] border border-[#2E2E2E] min-w-[130px]">
+          {/* Quick Metrics Bar - Rata Satu Baris */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
+            <div className="px-4 py-3 rounded-lg bg-[#1F1F1F] border border-[#2E2E2E] whitespace-nowrap">
               <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#A3A3A3]">
-                <Clock className="w-3.5 h-3.5 text-[#EA580C]" />
-                CURRENT SHIFT
+                <Clock className="w-3.5 h-3.5 text-[#EA580C] shrink-0" />
+                <span>CURRENT SHIFT</span>
               </div>
-              <div className="text-sm font-bold text-[#F5F5F5] font-mono mt-0.5">
+              <div className="text-sm font-bold text-[#F5F5F5] font-mono mt-1">
                 12:00 AM - 06:00 AM
               </div>
             </div>
 
-            <div className="p-3 rounded-lg bg-[#1F1F1F] border border-[#2E2E2E] min-w-[130px]">
+            <div className="px-4 py-3 rounded-lg bg-[#1F1F1F] border border-[#2E2E2E] whitespace-nowrap">
               <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#A3A3A3]">
-                <BatteryCharging className="w-3.5 h-3.5 text-[#FB923C]" />
-                POWER RESERVE
+                <BatteryCharging className="w-3.5 h-3.5 text-[#FB923C] shrink-0" />
+                <span>POWER RESERVE</span>
               </div>
-              <div className="text-sm font-bold text-[#FB923C] font-mono mt-0.5">
+              <div className="text-sm font-bold text-[#FB923C] font-mono mt-1">
                 99% AUXILIARY
               </div>
             </div>
 
-            <div className="p-3 rounded-lg bg-[#1F1F1F] border border-[#2E2E2E] min-w-[130px]">
+            <div className="px-4 py-3 rounded-lg bg-[#1F1F1F] border border-[#2E2E2E] whitespace-nowrap">
               <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#A3A3A3]">
-                <Radio className="w-3.5 h-3.5 text-[#EA580C]" />
-                SURVEILLANCE
+                <Radio className="w-3.5 h-3.5 text-[#EA580C] shrink-0" />
+                <span>SURVEILLANCE</span>
               </div>
-              <div className="text-sm font-bold text-[#F5F5F5] font-mono mt-0.5">
+              <div className="text-sm font-bold text-[#F5F5F5] font-mono mt-1">
                 11 FEEDS ONLINE
               </div>
             </div>
@@ -107,7 +107,6 @@ export default function Dashboard({ guardName, guardId, onNavigateAbout }) {
 
       {/* 4. Mandatory Closing Advisory Notice with Orange Hazard Styling */}
       <section className="bg-gradient-to-r from-[#141414] via-[#1E1611] to-[#141414] border-2 border-[#EA580C] rounded-xl p-6 sm:p-8 text-center relative overflow-hidden shadow-2xl">
-        {/* Striped caution hazard accent on top and bottom in orange and black */}
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-[repeating-linear-gradient(45deg,#EA580C,#EA580C_12px,#0A0A0A_12px,#0A0A0A_24px)]" />
         <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-[repeating-linear-gradient(45deg,#EA580C,#EA580C_12px,#0A0A0A_12px,#0A0A0A_24px)]" />
 

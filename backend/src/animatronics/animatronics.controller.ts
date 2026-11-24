@@ -26,6 +26,28 @@ export class AnimatronicsController {
     return this.animatronicsService.findAll();
   }
 
+  // --- ROUTE TRASH (HARUS DI ATAS :id) ---
+  @Get('trash/all')
+  findAllTrash() {
+    return this.animatronicsService.findAllTrash();
+  }
+
+  @Post('trash/:id/restore')
+  restoreFromTrash(@Param('id', ParseIntPipe) id: number) {
+    return this.animatronicsService.restoreFromTrash(id);
+  }
+
+  @Delete('trash/empty')
+  emptyTrash() {
+    return this.animatronicsService.emptyTrash();
+  }
+
+  @Delete('trash/:id')
+  permanentDeleteFromTrash(@Param('id', ParseIntPipe) id: number) {
+    return this.animatronicsService.permanentDeleteFromTrash(id);
+  }
+  // --------------------------------------
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.animatronicsService.findOne(id);
