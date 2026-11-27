@@ -2,7 +2,7 @@ import React from 'react';
 import { BookOpen, Lock, Unlock, FolderArchive } from 'lucide-react';
 
 export default function StoryGameSection({ animatronicsCount, onNavigateArchives }) {
-    const targetCount = 10;
+    const targetCount = 70;
     const isUnlocked = animatronicsCount >= targetCount;
     const progressPercent = Math.min((animatronicsCount / targetCount) * 100, 100);
 
@@ -33,11 +33,13 @@ export default function StoryGameSection({ animatronicsCount, onNavigateArchives
                     </div>
 
                     <div className="text-xs font-mono uppercase tracking-widest text-[#FB923C] mb-2">
-                        {isUnlocked ? 'ACCESS REQUIREMENT MET // MODULE IN DEVELOPMENT' : 'RESTRICTED ARCHIVE // LOCKED'}
+                        {isUnlocked ? 'ACCESS REQUIREMENT MET // ALL 70 ENTITIES LOGGED' : 'RESTRICTED ARCHIVE // LOCKED'}
                     </div>
 
                     <h2 className="text-2xl sm:text-3xl font-extrabold uppercase tracking-wider text-[#F5F5F5] font-['Chakra_Petch',sans-serif] leading-snug">
-                        Coming Soon - Terbuka Jika 10 Animatronic sudah ditemukan
+                        {isUnlocked
+                            ? 'Story Mode Timeline Terbuka (70/70 Entitas Teridentifikasi)'
+                            : 'Coming Soon - Terbuka Jika Seluruh 70 Animatronic Sudah Ditemukan'}
                     </h2>
 
                     {/* Progress Bar Sinkron dengan Archives */}

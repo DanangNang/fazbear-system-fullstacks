@@ -1,13 +1,11 @@
 import React from 'react';
 import { Flashlight, Clock, BatteryCharging, Radio, ArrowRight, ShieldCheck, FileText, CheckCircle2 } from 'lucide-react';
-import EncounterGuide from './EncounterGuide';
 
 export default function Dashboard({ guardName, guardId, onNavigateAbout }) {
   return (
     <div className="space-y-6">
       {/* 1. Personal Greeting Hero Banner */}
       <section className="bg-[#141414] border border-[#2E2E2E] rounded-xl p-6 sm:p-8 relative overflow-hidden shadow-2xl">
-        {/* Subtle orange accent corner glow */}
         <div className="absolute top-0 right-0 w-72 h-72 bg-[#EA580C]/12 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-6">
@@ -72,7 +70,7 @@ export default function Dashboard({ guardName, guardId, onNavigateAbout }) {
               </h2>
             </div>
             <p className="text-xs sm:text-sm text-[#A3A3A3] leading-relaxed">
-              Fazbear Archives adalah repositori internal terenkripsi yang mencatat riwayat insiden, status integritas animatronik, dan manual pertahanan keamanan pos jaga. Setiap petugas pos jaga shift malam wajib memahami rute gerak entitas serta mematuhi seluruh protokol keselamatan sebelum fajar menyingsing.
+              Fazbear Archives adalah repositori internal terenkripsi yang mencatat riwayat insiden, status integritas animatronik, dan arsip keamanan pos jaga. Setiap petugas pos jaga shift malam wajib memantau rute gerak entitas serta mematuhi seluruh protokol keselamatan sebelum fajar menyingsing.
             </p>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono text-[#A3A3A3] pt-1">
               <span className="flex items-center gap-1">
@@ -102,10 +100,7 @@ export default function Dashboard({ guardName, guardId, onNavigateAbout }) {
         </div>
       </section>
 
-      {/* 3. Static Tutorial: Encounter Guide */}
-      <EncounterGuide />
-
-      {/* 4. Mandatory Closing Advisory Notice with Orange Hazard Styling */}
+      {/* 3. Mandatory Closing Advisory Notice with Orange Hazard Styling */}
       <section className="bg-gradient-to-r from-[#141414] via-[#1E1611] to-[#141414] border-2 border-[#EA580C] rounded-xl p-6 sm:p-8 text-center relative overflow-hidden shadow-2xl">
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-[repeating-linear-gradient(45deg,#EA580C,#EA580C_12px,#0A0A0A_12px,#0A0A0A_24px)]" />
         <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-[repeating-linear-gradient(45deg,#EA580C,#EA580C_12px,#0A0A0A_12px,#0A0A0A_24px)]" />

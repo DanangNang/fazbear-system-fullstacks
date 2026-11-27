@@ -5,6 +5,7 @@ export class Animatronic {
     seriesGame: string;
     threatLevel: number;
     isPossessed: boolean;
+    status?: string; // 'Possessed' | 'Normal' | 'Pasif'
     behaviorNote?: string;
     imageUrl?: string;
     loggedAt: string;

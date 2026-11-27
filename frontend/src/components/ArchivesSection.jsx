@@ -15,11 +15,13 @@ import {
     ImagePlus,
     RotateCcw,
     ArchiveRestore,
+    ShieldCheck,
 } from 'lucide-react';
 
 const API_URL = 'http://localhost:3000/animatronics';
 
-const FORM_OPTIONS = ['Bear', 'Rabbit', 'Chicken', 'Fox', 'Things'];
+const FORM_OPTIONS = ['Bear', 'Rabbit', 'Chicken', 'Fox', 'Things', 'Other'];
+const OTHER_FORM_PRESETS = ['Human Robot', 'Frog', 'Pig', 'Hippo', 'Wolf', 'Gator'];
 
 const SERIES_OPTIONS = [
     'FNAF 1',
@@ -66,16 +68,16 @@ const compressImageFile = (file) =>
 export default function ArchivesSection({ animatronics, onRefresh, isLoading }) {
     const fileInputRef = useRef(null);
 
-    // Tab aktif: 'ACTIVE' atau 'TRASH'
     const [activeView, setActiveView] = useState('ACTIVE');
     const [trashItems, setTrashItems] = useState([]);
 
     // State form tambah data baru
     const [name, setName] = useState('');
     const [formType, setFormType] = useState('');
+    const [customForm, setCustomForm] = useState('');
     const [series, setSeries] = useState('');
     const [threatLevel, setThreatLevel] = useState(5);
-    const [isPossessed, setIsPossessed] = useState(true);
+    const [entityStatus, setEntityStatus] = useState('Possessed'); // 'Possessed' | 'Normal' | 'Pasif'
     const [behaviorNote, setBehaviorNote] = useState('');
     const [imageUrl, setImageUrl] = useState('');
 
@@ -90,7 +92,6 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
     const [searchQuery, setSearchQuery] = useState('');
     const [filterForm, setFilterForm] = useState('ALL');
 
-    // Ambil isi Trash dari backend
     const fetchTrashItems = async () => {
         try {
             const res = await fetch(`${API_URL}/trash/all`);
@@ -99,7 +100,7 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
                 setTrashItems(data);
             }
         } catch {
-            // Abaikan error jaringan sementara
+            // Abaikan error sementara
         }
     };
 
@@ -129,7 +130,11 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
     // CREATE -> POST /animatronics
     const handleAddSubmit = async (e) => {
         e.preventDefault();
-        if (!name.trim() || !formType || !series) return;
+        const finalForm = formType === 'Other' ? customForm.trim() : formType;
+        if (!name.trim() || !finalForm || !series) {
+            setApiError('Harap lengkapi Nama, Form/Klasifikasi, dan Series Game.');
+            return;
+        }
 
         setApiError('');
         setIsSubmitting(true);
@@ -140,10 +145,11 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: name.trim(),
-                    form: formType,
+                    form: finalForm,
                     seriesGame: series,
                     threatLevel: Number(threatLevel),
-                    isPossessed: Boolean(isPossessed),
+                    isPossessed: entityStatus === 'Possessed',
+                    status: entityStatus,
                     behaviorNote: behaviorNote.trim() || undefined,
                     imageUrl: imageUrl || undefined,
                 }),
@@ -161,9 +167,10 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
 
             setName('');
             setFormType('');
+            setCustomForm('');
             setSeries('');
             setThreatLevel(5);
-            setIsPossessed(true);
+            setEntityStatus('Possessed');
             setBehaviorNote('');
             setImageUrl('');
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -179,7 +186,15 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
     // UPDATE -> PATCH /animatronics/:id
     const handleEditSubmit = async (e) => {
         e.preventDefault();
-        if (!editingItem || !editingItem.name.trim() || !editingItem.form || !editingItem.series) {
+        if (!editingItem) return;
+
+        const finalForm =
+            editingItem.formSelect === 'Other'
+                ? editingItem.customForm?.trim()
+                : editingItem.formSelect;
+
+        if (!editingItem.name.trim() || !finalForm || !editingItem.series) {
+            setApiError('Nama, Form/Klasifikasi, dan Series tidak boleh kosong.');
             return;
         }
 
@@ -192,10 +207,11 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: editingItem.name.trim(),
-                    form: editingItem.form,
+                    form: finalForm,
                     seriesGame: editingItem.series,
                     threatLevel: Number(editingItem.threatLevel),
-                    isPossessed: Boolean(editingItem.isPossessed),
+                    isPossessed: editingItem.entityStatus === 'Possessed',
+                    status: editingItem.entityStatus,
                     behaviorNote: editingItem.behaviorNote?.trim() || '',
                     imageUrl: editingItem.imageUrl || '',
                 }),
@@ -249,7 +265,6 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
         }
     };
 
-    // RESTORE FROM TRASH -> POST /animatronics/trash/:id/restore
     const handleRestoreItem = async (id) => {
         setApiError('');
         try {
@@ -268,7 +283,6 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
         }
     };
 
-    // PERMANENT DELETE ONE -> DELETE /animatronics/trash/:id
     const handlePermanentDelete = async (id) => {
         setApiError('');
         try {
@@ -283,7 +297,6 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
         }
     };
 
-    // EMPTY ALL TRASH -> DELETE /animatronics/trash/empty
     const handleEmptyTrash = async () => {
         setApiError('');
         try {
@@ -298,14 +311,26 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
         }
     };
 
+    const standardForms = ['Bear', 'Rabbit', 'Chicken', 'Fox', 'Things'];
+
     const filteredAnimatronics = animatronics.filter((item) => {
         const seriesName = item.series || item.seriesGame || '';
         const matchesSearch =
             item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            seriesName.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesForm = filterForm === 'ALL' || item.form === filterForm;
-        return matchesSearch && matchesForm;
+            seriesName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.form.toLowerCase().includes(searchQuery.toLowerCase());
+
+        if (filterForm === 'ALL') return matchesSearch;
+        if (filterForm === 'Other') {
+            return matchesSearch && !standardForms.includes(item.form);
+        }
+        return matchesSearch && item.form === filterForm;
     });
+
+    const getEntityStatusLabel = (item) => {
+        if (item.status) return item.status;
+        return item.isPossessed ? 'Possessed' : 'Normal';
+    };
 
     return (
         <div className="space-y-6">
@@ -325,12 +350,10 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <div className="px-4 py-2.5 rounded-lg bg-[#1F1F1F] border border-[#2E2E2E] font-mono text-right">
-                            <div className="text-[11px] text-[#A3A3A3]">ACTIVE ARCHIVES</div>
-                            <div className="text-xl font-bold text-[#EA580C]">
-                                {animatronics.length} <span className="text-xs font-normal text-[#A3A3A3]">RECORDS</span>
-                            </div>
+                    <div className="px-4 py-2.5 rounded-lg bg-[#1F1F1F] border border-[#2E2E2E] font-mono text-right">
+                        <div className="text-[11px] text-[#A3A3A3]">ACTIVE ARCHIVES</div>
+                        <div className="text-xl font-bold text-[#EA580C]">
+                            {animatronics.length} <span className="text-xs font-normal text-[#A3A3A3]">RECORDS</span>
                         </div>
                     </div>
                 </div>
@@ -353,7 +376,7 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
                 </div>
             )}
 
-            {/* Mode Switcher: Active Archives vs Trash Bin */}
+            {/* Mode Switcher */}
             <div className="flex items-center justify-between gap-3 border-b border-[#2E2E2E] pb-3">
                 <div className="flex items-center gap-2">
                     <button
@@ -405,6 +428,7 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
                         </div>
 
                         <form onSubmit={handleAddSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            {/* Nama Animatronic */}
                             <div className="md:col-span-2">
                                 <label className="block text-xs font-mono text-[#A3A3A3] uppercase mb-1.5">
                                     Nama Animatronic
@@ -412,13 +436,14 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
                                 <input
                                     type="text"
                                     required
-                                    placeholder="Contoh: Freddy Fazbear, Bonnie..."
+                                    placeholder="Contoh: Roxanne Wolf, Happy Frog, Glamrock Freddy..."
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     className="w-full px-3.5 py-2.5 rounded-lg bg-[#0A0A0A] border border-[#2E2E2E] focus:border-[#EA580C] focus:outline-none text-sm text-[#F5F5F5] placeholder-[#525252]"
                                 />
                             </div>
 
+                            {/* Form / Klasifikasi */}
                             <div>
                                 <label className="block text-xs font-mono text-[#A3A3A3] uppercase mb-1.5">
                                     Form / Klasifikasi
@@ -441,6 +466,7 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
                                 </select>
                             </div>
 
+                            {/* Series Game */}
                             <div>
                                 <label className="block text-xs font-mono text-[#A3A3A3] uppercase mb-1.5">
                                     Series Game
@@ -463,6 +489,40 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
                                 </select>
                             </div>
 
+                            {/* Input Manual Form Jika Memilih "Other" */}
+                            {formType === 'Other' && (
+                                <div className="md:col-span-4 p-4 rounded-lg bg-[#0A0A0A] border border-[#EA580C]/60 space-y-2.5">
+                                    <label className="block text-xs font-mono text-[#FB923C] uppercase">
+                                        Input Manual Form / Klasifikasi (Other)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="Ketik klasifikasi manual (misal: Human Robot, Frog, Pig, Hippo, Wolf, Gator)..."
+                                        value={customForm}
+                                        onChange={(e) => setCustomForm(e.target.value)}
+                                        className="w-full px-3.5 py-2 rounded-lg bg-[#141414] border border-[#2E2E2E] focus:border-[#EA580C] focus:outline-none text-sm text-[#F5F5F5] placeholder-[#525252]"
+                                    />
+                                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                        <span className="text-[11px] font-mono text-[#A3A3A3] mr-1">Saran Cepat:</span>
+                                        {OTHER_FORM_PRESETS.map((preset) => (
+                                            <button
+                                                key={preset}
+                                                type="button"
+                                                onClick={() => setCustomForm(preset)}
+                                                className={`px-2.5 py-1 rounded text-[11px] font-mono cursor-pointer border transition-colors ${customForm === preset
+                                                    ? 'bg-[#EA580C] text-white border-[#EA580C]'
+                                                    : 'bg-[#141414] text-[#A3A3A3] border-[#2E2E2E] hover:border-[#EA580C] hover:text-[#F5F5F5]'
+                                                    }`}
+                                            >
+                                                {preset}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Threat Level */}
                             <div>
                                 <label className="block text-xs font-mono text-[#A3A3A3] uppercase mb-1.5">
                                     Threat Level (1 - 10)
@@ -478,27 +538,30 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
                                 />
                             </div>
 
+                            {/* Status Entitas (Termasuk Pasif) */}
                             <div>
                                 <label className="block text-xs font-mono text-[#A3A3A3] uppercase mb-1.5">
                                     Status Entitas
                                 </label>
                                 <select
-                                    value={isPossessed ? 'true' : 'false'}
-                                    onChange={(e) => setIsPossessed(e.target.value === 'true')}
+                                    value={entityStatus}
+                                    onChange={(e) => setEntityStatus(e.target.value)}
                                     className="w-full px-3.5 py-2.5 rounded-lg bg-[#0A0A0A] border border-[#2E2E2E] focus:border-[#EA580C] focus:outline-none text-sm text-[#F5F5F5] cursor-pointer"
                                 >
-                                    <option value="true">Possessed (Aktif/Berbahaya)</option>
-                                    <option value="false">Normal / Non-Possessed</option>
+                                    <option value="Possessed">Possessed (Aktif/Berbahaya)</option>
+                                    <option value="Normal">Normal / Non-Possessed</option>
+                                    <option value="Pasif">Pasif (Ramah / Non-Agresif)</option>
                                 </select>
                             </div>
 
+                            {/* Catatan Perilaku */}
                             <div className="md:col-span-2">
                                 <label className="block text-xs font-mono text-[#A3A3A3] uppercase mb-1.5">
                                     Catatan Perilaku (Opsional)
                                 </label>
                                 <input
                                     type="text"
-                                    placeholder="Contoh: Menyerang dari lorong kiri saat kamera mati..."
+                                    placeholder="Contoh: Membantu pemain di panggung utama..."
                                     value={behaviorNote}
                                     onChange={(e) => setBehaviorNote(e.target.value)}
                                     className="w-full px-3.5 py-2.5 rounded-lg bg-[#0A0A0A] border border-[#2E2E2E] focus:border-[#EA580C] focus:outline-none text-sm text-[#F5F5F5] placeholder-[#525252]"
@@ -546,6 +609,7 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
                                 </div>
                             </div>
 
+                            {/* Submit */}
                             <div className="md:col-span-4 flex justify-end pt-1">
                                 <button
                                     type="submit"
@@ -565,7 +629,7 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
                             <Search className="w-4 h-4 text-[#A3A3A3] absolute left-3.5 top-1/2 -translate-y-1/2" />
                             <input
                                 type="text"
-                                placeholder="Cari nama animatronic atau series..."
+                                placeholder="Cari nama, form, atau series..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#141414] border border-[#2E2E2E] focus:border-[#EA580C] focus:outline-none text-xs sm:text-sm text-[#F5F5F5]"
@@ -603,91 +667,107 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
                         </div>
                     ) : (
                         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {filteredAnimatronics.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="bg-[#141414] border border-[#2E2E2E] hover:border-[#EA580C]/70 rounded-xl p-5 flex flex-col justify-between transition-all group shadow-lg"
-                                >
-                                    <div>
-                                        <div className="flex items-center justify-between text-[11px] font-mono text-[#A3A3A3] mb-3 pb-2 border-b border-[#2E2E2E]">
-                                            <span className="text-[#EA580C] font-semibold">ID #{item.id}</span>
-                                            <span className="px-2 py-0.5 rounded bg-[#1F1F1F] border border-[#2E2E2E] text-[#F5F5F5]">
-                                                FORM: {item.form.toUpperCase()}
-                                            </span>
-                                        </div>
-
-                                        {item.imageUrl && (
-                                            <div className="mb-3 rounded-lg overflow-hidden border border-[#2E2E2E] bg-[#0A0A0A] aspect-video">
-                                                <img
-                                                    src={item.imageUrl}
-                                                    alt={item.name}
-                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                                />
+                            {filteredAnimatronics.map((item) => {
+                                const statusLabel = getEntityStatusLabel(item);
+                                return (
+                                    <div
+                                        key={item.id}
+                                        className="bg-[#141414] border border-[#2E2E2E] hover:border-[#EA580C]/70 rounded-xl p-5 flex flex-col justify-between transition-all group shadow-lg"
+                                    >
+                                        <div>
+                                            <div className="flex items-center justify-between text-[11px] font-mono text-[#A3A3A3] mb-3 pb-2 border-b border-[#2E2E2E]">
+                                                <span className="text-[#EA580C] font-semibold">ID #{item.id}</span>
+                                                <span className="px-2 py-0.5 rounded bg-[#1F1F1F] border border-[#2E2E2E] text-[#F5F5F5]">
+                                                    FORM: {item.form.toUpperCase()}
+                                                </span>
                                             </div>
-                                        )}
 
-                                        <div className="flex items-start gap-3">
-                                            <div className="w-10 h-10 rounded-lg bg-[#1F1F1F] border border-[#2E2E2E] flex items-center justify-center text-[#EA580C] shrink-0">
-                                                <Cpu className="w-5 h-5" />
+                                            {item.imageUrl && (
+                                                <div className="mb-3 rounded-lg overflow-hidden border border-[#2E2E2E] bg-[#0A0A0A] aspect-video">
+                                                    <img
+                                                        src={item.imageUrl}
+                                                        alt={item.name}
+                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                    />
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-start gap-3">
+                                                <div className="w-10 h-10 rounded-lg bg-[#1F1F1F] border border-[#2E2E2E] flex items-center justify-center text-[#EA580C] shrink-0">
+                                                    <Cpu className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-bold text-[#F5F5F5] uppercase tracking-wide font-['Chakra_Petch',sans-serif] group-hover:text-[#FB923C] transition-colors">
+                                                        {item.name}
+                                                    </h3>
+                                                    <p className="text-xs font-mono text-[#A3A3A3] mt-0.5">
+                                                        SERIES: <span className="text-[#F5F5F5]">{item.series || item.seriesGame}</span>
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h3 className="text-lg font-bold text-[#F5F5F5] uppercase tracking-wide font-['Chakra_Petch',sans-serif] group-hover:text-[#FB923C] transition-colors">
-                                                    {item.name}
-                                                </h3>
-                                                <p className="text-xs font-mono text-[#A3A3A3] mt-0.5">
-                                                    SERIES: <span className="text-[#F5F5F5]">{item.series || item.seriesGame}</span>
+
+                                            {/* Threat & Status Badges */}
+                                            <div className="flex flex-wrap items-center gap-2 mt-3 pt-2.5 border-t border-[#2E2E2E]/60 text-[11px] font-mono">
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-orange-950/50 border border-orange-500/40 text-[#FB923C]">
+                                                    <Flame className="w-3 h-3" />
+                                                    THREAT: {item.threatLevel}/10
+                                                </span>
+
+                                                {statusLabel === 'Pasif' ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border bg-sky-950/60 border-sky-500/40 text-sky-400">
+                                                        <ShieldCheck className="w-3 h-3" />
+                                                        PASIF
+                                                    </span>
+                                                ) : statusLabel === 'Possessed' ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border bg-red-950/50 border-red-500/40 text-red-400">
+                                                        <Ghost className="w-3 h-3" />
+                                                        POSSESSED
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border bg-emerald-950/50 border-emerald-500/40 text-emerald-400">
+                                                        <Ghost className="w-3 h-3" />
+                                                        NORMAL
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {item.behaviorNote && (
+                                                <p className="mt-2.5 text-xs text-[#A3A3A3] italic line-clamp-2">
+                                                    "{item.behaviorNote}"
                                                 </p>
-                                            </div>
+                                            )}
                                         </div>
 
-                                        <div className="flex flex-wrap items-center gap-2 mt-3 pt-2.5 border-t border-[#2E2E2E]/60 text-[11px] font-mono">
-                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-orange-950/50 border border-orange-500/40 text-[#FB923C]">
-                                                <Flame className="w-3 h-3" />
-                                                THREAT: {item.threatLevel}/10
-                                            </span>
-                                            <span
-                                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border ${item.isPossessed
-                                                    ? 'bg-red-950/50 border-red-500/40 text-red-400'
-                                                    : 'bg-emerald-950/50 border-emerald-500/40 text-emerald-400'
-                                                    }`}
+                                        <div className="flex items-center justify-end gap-2 mt-5 pt-3 border-t border-[#2E2E2E]/70">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const isStandard = standardForms.includes(item.form);
+                                                    setEditingItem({
+                                                        ...item,
+                                                        series: item.series || item.seriesGame,
+                                                        formSelect: isStandard ? item.form : 'Other',
+                                                        customForm: isStandard ? '' : item.form,
+                                                        entityStatus: getEntityStatusLabel(item),
+                                                    });
+                                                }}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#1F1F1F] hover:bg-[#2A2A2A] border border-[#2E2E2E] hover:border-[#EA580C] text-xs font-mono text-[#F5F5F5] cursor-pointer transition-colors"
                                             >
-                                                <Ghost className="w-3 h-3" />
-                                                {item.isPossessed ? 'POSSESSED' : 'NORMAL'}
-                                            </span>
+                                                <Pencil className="w-3.5 h-3.5 text-[#FB923C]" />
+                                                <span>EDIT</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setDeletingItem(item)}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#1F1F1F] hover:bg-red-950/50 border border-[#2E2E2E] hover:border-red-500/60 text-xs font-mono text-[#A3A3A3] hover:text-red-400 cursor-pointer transition-colors"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                                <span>HAPUS</span>
+                                            </button>
                                         </div>
-
-                                        {item.behaviorNote && (
-                                            <p className="mt-2.5 text-xs text-[#A3A3A3] italic line-clamp-2">
-                                                "{item.behaviorNote}"
-                                            </p>
-                                        )}
                                     </div>
-
-                                    <div className="flex items-center justify-end gap-2 mt-5 pt-3 border-t border-[#2E2E2E]/70">
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setEditingItem({
-                                                    ...item,
-                                                    series: item.series || item.seriesGame,
-                                                })
-                                            }
-                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#1F1F1F] hover:bg-[#2A2A2A] border border-[#2E2E2E] hover:border-[#EA580C] text-xs font-mono text-[#F5F5F5] cursor-pointer transition-colors"
-                                        >
-                                            <Pencil className="w-3.5 h-3.5 text-[#FB923C]" />
-                                            <span>EDIT</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setDeletingItem(item)}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#1F1F1F] hover:bg-red-950/50 border border-[#2E2E2E] hover:border-red-500/60 text-xs font-mono text-[#A3A3A3] hover:text-red-400 cursor-pointer transition-colors"
-                                        >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                            <span>HAPUS</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </section>
                     )}
                 </>
@@ -808,9 +888,12 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
                                     </label>
                                     <select
                                         required
-                                        value={editingItem.form}
+                                        value={editingItem.formSelect}
                                         onChange={(e) =>
-                                            setEditingItem({ ...editingItem, form: e.target.value })
+                                            setEditingItem({
+                                                ...editingItem,
+                                                formSelect: e.target.value,
+                                            })
                                         }
                                         className="w-full px-3.5 py-2.5 rounded-lg bg-[#0A0A0A] border border-[#2E2E2E] focus:border-[#EA580C] focus:outline-none text-sm text-[#F5F5F5] cursor-pointer"
                                     >
@@ -843,6 +926,44 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
                                 </div>
                             </div>
 
+                            {editingItem.formSelect === 'Other' && (
+                                <div className="p-3 rounded-lg bg-[#0A0A0A] border border-[#EA580C]/60 space-y-2">
+                                    <label className="block text-[11px] font-mono text-[#FB923C] uppercase">
+                                        Input Manual Form (Other)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="Human Robot, Frog, Pig, Hippo, Wolf, Gator..."
+                                        value={editingItem.customForm || ''}
+                                        onChange={(e) =>
+                                            setEditingItem({
+                                                ...editingItem,
+                                                customForm: e.target.value,
+                                            })
+                                        }
+                                        className="w-full px-3 py-2 rounded bg-[#141414] border border-[#2E2E2E] focus:border-[#EA580C] focus:outline-none text-xs text-[#F5F5F5]"
+                                    />
+                                    <div className="flex flex-wrap gap-1">
+                                        {OTHER_FORM_PRESETS.map((preset) => (
+                                            <button
+                                                key={preset}
+                                                type="button"
+                                                onClick={() =>
+                                                    setEditingItem({
+                                                        ...editingItem,
+                                                        customForm: preset,
+                                                    })
+                                                }
+                                                className="px-2 py-0.5 rounded bg-[#141414] border border-[#2E2E2E] hover:border-[#EA580C] text-[10px] font-mono text-[#A3A3A3] hover:text-white cursor-pointer"
+                                            >
+                                                {preset}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <div>
                                 <label className="block text-xs font-mono text-[#A3A3A3] uppercase mb-1.5">
                                     Series Game
@@ -868,17 +989,18 @@ export default function ArchivesSection({ animatronics, onRefresh, isLoading }) 
                                     Status Entitas
                                 </label>
                                 <select
-                                    value={editingItem.isPossessed ? 'true' : 'false'}
+                                    value={editingItem.entityStatus}
                                     onChange={(e) =>
                                         setEditingItem({
                                             ...editingItem,
-                                            isPossessed: e.target.value === 'true',
+                                            entityStatus: e.target.value,
                                         })
                                     }
                                     className="w-full px-3.5 py-2.5 rounded-lg bg-[#0A0A0A] border border-[#2E2E2E] focus:border-[#EA580C] focus:outline-none text-sm text-[#F5F5F5] cursor-pointer"
                                 >
-                                    <option value="true">Possessed (Aktif/Berbahaya)</option>
-                                    <option value="false">Normal / Non-Possessed</option>
+                                    <option value="Possessed">Possessed (Aktif/Berbahaya)</option>
+                                    <option value="Normal">Normal / Non-Possessed</option>
+                                    <option value="Pasif">Pasif (Ramah / Non-Agresif)</option>
                                 </select>
                             </div>
 

@@ -35,6 +35,7 @@ export default function CameraSection() {
     const [selectedDeviceId, setSelectedDeviceId] = useState('');
     const [isStreaming, setIsStreaming] = useState(false);
     const [activeChannel, setActiveChannel] = useState(CCTV_CHANNELS[0]);
+    const [isSwitchingCam, setIsSwitchingCam] = useState(false);
     const [nightVision, setNightVision] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -49,6 +50,13 @@ export default function CameraSection() {
         }
     });
     const [previewSnapshot, setPreviewSnapshot] = useState(null);
+
+    const handleSwitchChannel = (channel) => {
+        if (channel.id === activeChannel.id) return;
+        setIsSwitchingCam(true);
+        setActiveChannel(channel);
+        setTimeout(() => setIsSwitchingCam(false), 380);
+    };
 
     useEffect(() => {
         try {
@@ -152,7 +160,6 @@ export default function CameraSection() {
         const video = videoRef.current;
         const canvas = canvasRef.current;
 
-        // Skala optimal agar ringan disimpan di localStorage
         const targetWidth = 960;
         const ratio = (video.videoHeight || 720) / (video.videoWidth || 1280);
         canvas.width = targetWidth;
@@ -327,6 +334,17 @@ export default function CameraSection() {
                                 }`}
                         />
 
+                        {/* Animasi Static Glitch saat Pergantian Kamera */}
+                        {isSwitchingCam && (
+                            <div className="absolute inset-0 z-20 bg-black/90 flex flex-col items-center justify-center pointer-events-none animate-pulse">
+                                <div className="w-full h-1 bg-[#EA580C]/80 shadow-[0_0_15px_#EA580C] mb-3" />
+                                <div className="px-4 py-1.5 rounded bg-[#141414] border border-[#EA580C] font-mono text-xs text-[#FB923C] tracking-widest uppercase">
+                                    SWITCHING FEED // {activeChannel.label}...
+                                </div>
+                                <div className="w-full h-0.5 bg-white/30 mt-3" />
+                            </div>
+                        )}
+
                         <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.35)_50%)] [background-size:100%_4px] opacity-60" />
 
                         <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-none font-mono">
@@ -383,7 +401,7 @@ export default function CameraSection() {
                                     <button
                                         key={ch.id}
                                         type="button"
-                                        onClick={() => setActiveChannel(ch)}
+                                        onClick={() => handleSwitchChannel(ch)}
                                         className={`w-full text-left px-3 py-2.5 rounded-lg border text-xs font-mono transition-all cursor-pointer ${isSelected
                                             ? 'bg-[#EA580C] text-white border-[#EA580C] font-bold shadow-[0_0_12px_rgba(234,88,12,0.35)]'
                                             : 'bg-[#1A1A1A] text-[#A3A3A3] border-[#2E2E2E] hover:border-[#EA580C]/60 hover:text-[#F5F5F5]'

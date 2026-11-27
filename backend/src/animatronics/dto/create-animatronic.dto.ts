@@ -14,14 +14,12 @@ export class CreateAnimatronicDto {
     @MinLength(3, { message: 'Nama animatronic minimal 3 karakter' })
     name: string;
 
-    @IsString()
-    @IsIn(['Bear', 'Rabbit', 'Chicken', 'Fox', 'Things'], {
-        message: 'Form harus salah satu dari: Bear, Rabbit, Chicken, Fox, Things',
-    })
+    @IsString({ message: 'Form harus berupa teks' })
+    @MinLength(2, { message: 'Form / Klasifikasi minimal 2 karakter' })
     form: string;
 
     @IsString()
-    @MinLength(4, { message: 'Series game minimal 4 karakter (contoh: FNAF 1)' })
+    @MinLength(4, { message: 'Series game minimal 4 karakter' })
     seriesGame: string;
 
     @IsInt({ message: 'Threat level harus berupa angka bulat' })
@@ -31,6 +29,13 @@ export class CreateAnimatronicDto {
 
     @IsBoolean({ message: 'Status isPossessed harus berupa boolean (true/false)' })
     isPossessed: boolean;
+
+    @IsOptional()
+    @IsString()
+    @IsIn(['Possessed', 'Normal', 'Pasif'], {
+        message: 'Status harus salah satu dari: Possessed, Normal, Pasif',
+    })
+    status?: string;
 
     @IsOptional()
     @IsString()

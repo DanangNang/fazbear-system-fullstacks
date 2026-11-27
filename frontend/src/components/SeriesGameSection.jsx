@@ -14,44 +14,50 @@ const SERIES_CATALOG = [
     {
         id: 'FNAF 1',
         code: 'SRV-01 // 1993',
-        title: 'Five Nights at Freddy\'s',
-        location: 'Freddy Fazbear\'s Pizza (Hurricane, Utah)',
+        title: "Five Nights at Freddy's",
+        location: "Freddy Fazbear's Pizza (Hurricane, Utah)",
         threatLevel: 'HIGH',
+        expectedCount: 5,
     },
     {
         id: 'FNAF 2',
         code: 'SRV-02 // 1987',
-        title: 'Five Nights at Freddy\'s 2',
-        location: 'The New and Improved Freddy Fazbear\'s Pizza',
+        title: "Five Nights at Freddy's 2",
+        location: "The New and Improved Freddy Fazbear's Pizza",
         threatLevel: 'SEVERE',
+        expectedCount: 13,
     },
     {
         id: 'FNAF 3',
         code: 'SRV-03 // 2023',
-        title: 'Five Nights at Freddy\'s 3',
-        location: 'Fazbear\'s Fright: The Horror Attraction',
+        title: "Five Nights at Freddy's 3",
+        location: "Fazbear's Fright: The Horror Attraction",
         threatLevel: 'CRITICAL',
+        expectedCount: 6,
     },
     {
         id: 'FNAF 4',
         code: 'SRV-04 // 1983',
-        title: 'Five Nights at Freddy\'s 4',
+        title: "Five Nights at Freddy's 4",
         location: 'Afton Residence // Nightmare Sector',
         threatLevel: 'EXTREME',
+        expectedCount: 10,
     },
     {
         id: 'FNAF: Sister Location',
         code: 'SRV-05 // SL-85',
         title: 'FNAF: Sister Location',
-        location: 'Circus Baby\'s Entertainment and Rental',
+        location: "Circus Baby's Entertainment and Rental",
         threatLevel: 'CRITICAL',
+        expectedCount: 7,
     },
     {
         id: "Freddy Fazbear's Pizzeria Simulator",
         code: 'SRV-06 // FFPS',
         title: "Freddy Fazbear's Pizzeria Simulator",
-        location: 'Freddy Fazbear\'s Pizza Place (Labyrinth)',
+        location: "Freddy Fazbear's Pizza Place (Labyrinth)",
         threatLevel: 'SEVERE',
+        expectedCount: 18,
     },
     {
         id: 'FNAF: Help Wanted',
@@ -59,22 +65,23 @@ const SERIES_CATALOG = [
         title: 'FNAF: Help Wanted',
         location: 'The Freddy Fazbear Virtual Experience',
         threatLevel: 'ANOMALY',
+        expectedCount: 2,
     },
     {
         id: 'FNAF: Security Breach',
         code: 'SRV-08 // MEGA-PP',
         title: 'FNAF: Security Breach',
-        location: 'Freddy Fazbear\'s Mega Pizzaplex',
+        location: "Freddy Fazbear's Mega Pizzaplex",
         threatLevel: 'MAXIMUM',
+        expectedCount: 9,
     },
 ];
 
 export default function SeriesGameSection({ animatronics, onNavigateArchives }) {
     const [selectedSeries, setSelectedSeries] = useState(null);
 
-    // Kelompokkan animatronic berdasarkan series
     const getEntitiesBySeries = (seriesId) =>
-        animatronics.filter((item) => item.series === seriesId);
+        animatronics.filter((item) => (item.series || item.seriesGame) === seriesId);
 
     const unlockedCount = SERIES_CATALOG.filter(
         (s) => getEntitiesBySeries(s.id).length > 0
@@ -121,11 +128,10 @@ export default function SeriesGameSection({ animatronics, onNavigateArchives }) 
                             key={series.id}
                             onClick={() => isUnlocked && setSelectedSeries(series)}
                             className={`rounded-xl p-5 border transition-all flex flex-col justify-between relative overflow-hidden ${isUnlocked
-                                    ? 'bg-[#141414] border-[#2E2E2E] hover:border-[#EA580C] cursor-pointer shadow-lg group'
-                                    : 'bg-[#0E0E0E] border-[#1F1F1F] opacity-65 select-none'
+                                ? 'bg-[#141414] border-[#2E2E2E] hover:border-[#EA580C] cursor-pointer shadow-lg group'
+                                : 'bg-[#0E0E0E] border-[#1F1F1F] opacity-65 select-none'
                                 }`}
                         >
-                            {/* Top Status Badge */}
                             <div>
                                 <div className="flex items-center justify-between text-[11px] font-mono mb-3 pb-2 border-b border-[#2E2E2E]">
                                     <span className={isUnlocked ? 'text-[#EA580C] font-semibold' : 'text-[#525252]'}>
@@ -144,11 +150,10 @@ export default function SeriesGameSection({ animatronics, onNavigateArchives }) 
                                     )}
                                 </div>
 
-                                {/* Title & Location */}
                                 <h2
                                     className={`text-base sm:text-lg font-bold uppercase tracking-wide font-['Chakra_Petch',sans-serif] leading-snug ${isUnlocked
-                                            ? 'text-[#F5F5F5] group-hover:text-[#FB923C] transition-colors'
-                                            : 'text-[#737373]'
+                                        ? 'text-[#F5F5F5] group-hover:text-[#FB923C] transition-colors'
+                                        : 'text-[#737373]'
                                         }`}
                                 >
                                     {series.id}
@@ -159,13 +164,12 @@ export default function SeriesGameSection({ animatronics, onNavigateArchives }) 
                                 </p>
                             </div>
 
-                            {/* Footer Info */}
                             <div className="mt-5 pt-3 border-t border-[#2E2E2E]/70 flex items-center justify-between text-xs font-mono">
                                 {isUnlocked ? (
                                     <>
                                         <span className="text-[#F5F5F5] flex items-center gap-1.5">
                                             <Cpu className="w-3.5 h-3.5 text-[#EA580C]" />
-                                            {entities.length} Entitas
+                                            {entities.length} / {series.expectedCount} Entitas
                                         </span>
                                         <span className="text-[#FB923C] inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
                                             INSPECT <ArrowRight className="w-3.5 h-3.5" />
@@ -173,7 +177,7 @@ export default function SeriesGameSection({ animatronics, onNavigateArchives }) 
                                     </>
                                 ) : (
                                     <span className="text-[#525252] text-[11px]">
-                                        0 ENTITAS TERDETEKSI
+                                        0 / {series.expectedCount} ENTITAS
                                     </span>
                                 )}
                             </div>
@@ -210,7 +214,6 @@ export default function SeriesGameSection({ animatronics, onNavigateArchives }) 
                         className="w-full max-w-lg bg-[#141414] border border-[#EA580C] rounded-xl shadow-[0_0_35px_rgba(234,88,12,0.25)] overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Modal Header */}
                         <div className="px-6 py-4 bg-[#1F1F1F] border-b border-[#2E2E2E] flex items-center justify-between">
                             <div>
                                 <div className="text-[11px] font-mono text-[#EA580C] font-semibold">
@@ -230,7 +233,6 @@ export default function SeriesGameSection({ animatronics, onNavigateArchives }) 
                             </button>
                         </div>
 
-                        {/* Modal Content */}
                         <div className="p-6 space-y-4">
                             <div className="p-3 rounded-lg bg-[#0A0A0A] border border-[#2E2E2E] text-xs font-mono">
                                 <span className="text-[#A3A3A3]">SECTOR LOCATION: </span>
@@ -240,31 +242,37 @@ export default function SeriesGameSection({ animatronics, onNavigateArchives }) 
                             <div>
                                 <div className="text-xs font-mono text-[#A3A3A3] uppercase mb-2 flex items-center gap-1.5">
                                     <ShieldCheck className="w-3.5 h-3.5 text-[#EA580C]" />
-                                    <span>Animatronic Terdeteksi ({getEntitiesBySeries(selectedSeries.id).length})</span>
+                                    <span>
+                                        Animatronic Terdeteksi ({getEntitiesBySeries(selectedSeries.id).length} / {selectedSeries.expectedCount})
+                                    </span>
                                 </div>
 
                                 <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                                    {getEntitiesBySeries(selectedSeries.id).map((entity) => (
-                                        <div
-                                            key={entity.id}
-                                            className="flex items-center justify-between p-3 rounded-lg bg-[#1A1A1A] border border-[#2E2E2E]"
-                                        >
-                                            <div className="flex items-center gap-2.5">
-                                                <Cpu className="w-4 h-4 text-[#EA580C]" />
-                                                <div>
-                                                    <div className="text-sm font-bold text-[#F5F5F5] uppercase font-['Chakra_Petch',sans-serif]">
-                                                        {entity.name}
-                                                    </div>
-                                                    <div className="text-[11px] font-mono text-[#A3A3A3]">
-                                                        {entity.id}
+                                    {getEntitiesBySeries(selectedSeries.id).map((entity) => {
+                                        const entityStatus =
+                                            entity.status || (entity.isPossessed ? 'Possessed' : 'Normal');
+                                        return (
+                                            <div
+                                                key={entity.id}
+                                                className="flex items-center justify-between p-3 rounded-lg bg-[#1A1A1A] border border-[#2E2E2E]"
+                                            >
+                                                <div className="flex items-center gap-2.5">
+                                                    <Cpu className="w-4 h-4 text-[#EA580C]" />
+                                                    <div>
+                                                        <div className="text-sm font-bold text-[#F5F5F5] uppercase font-['Chakra_Petch',sans-serif]">
+                                                            {entity.name}
+                                                        </div>
+                                                        <div className="text-[11px] font-mono text-[#A3A3A3]">
+                                                            STATUS: {entityStatus.toUpperCase()}
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                <span className="px-2.5 py-0.5 rounded bg-[#0A0A0A] border border-[#2E2E2E] text-[11px] font-mono text-[#FB923C]">
+                                                    {entity.form.toUpperCase()}
+                                                </span>
                                             </div>
-                                            <span className="px-2.5 py-0.5 rounded bg-[#0A0A0A] border border-[#2E2E2E] text-[11px] font-mono text-[#FB923C]">
-                                                {entity.form.toUpperCase()}
-                                            </span>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
 
